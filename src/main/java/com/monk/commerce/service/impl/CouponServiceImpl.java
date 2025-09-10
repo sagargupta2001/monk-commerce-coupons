@@ -27,10 +27,8 @@ public class CouponServiceImpl implements CouponService {
     @Override
     public CouponResponse createCoupon(CouponRequest request) {
         Coupon entity = new Coupon();
-        // Use record accessor method .type() instead of .getType()
         entity.setType(request.type());
         try {
-            // Use record accessor method .details() instead of .getDetails()
             entity.setDetails(mapper.writeValueAsString(request.details()));
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -52,10 +50,8 @@ public class CouponServiceImpl implements CouponService {
     @Override
     public CouponResponse updateCoupon(Integer id, CouponRequest request) {
         Coupon entity = repository.findById(id).orElseThrow(() -> new CouponNotFoundException(id));
-        // Use record accessor method .type()
         entity.setType(request.type());
         try {
-            // Use record accessor method .details()
             entity.setDetails(mapper.writeValueAsString(request.details()));
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -73,25 +69,20 @@ public class CouponServiceImpl implements CouponService {
     public ApplicableCouponsResponse getApplicableCoupons(CartRequest cart) {
         List<ApplicableCoupon> applicable = repository.findAll().stream().map(this::toResponse)
                 .filter(c -> {
-                    // Use record accessor method .type()
                     CouponStrategy strategy = factory.getStrategy(c.type());
                     return strategy.isApplicable(cart, c);
                 })
                 .map(c -> {
-                    // Use record accessor method .type()
                     CouponStrategy strategy = factory.getStrategy(c.type());
                     double discount = strategy.calculateDiscount(cart, c);
-                    // Instantiate ApplicableCoupon record using its constructor
                     return new ApplicableCoupon(c.id(), c.type(), discount);
                 }).toList();
-        // Instantiate ApplicableCouponsResponse record using its constructor
         return new ApplicableCouponsResponse(applicable);
     }
 
     @Override
     public ApplyCouponResponse applyCoupon(Integer id, CartRequest cart) {
         CouponResponse coupon = getCoupon(id);
-        // Use record accessor method .type()
         CouponStrategy strategy = factory.getStrategy(coupon.type());
         return strategy.applyCoupon(cart, coupon);
     }
@@ -101,10 +92,8 @@ public class CouponServiceImpl implements CouponService {
         try {
             details = mapper.readValue(entity.getDetails(), Object.class);
         } catch (Exception e) {
-            // Assign null or handle the exception more gracefully
             details = null;
         }
-        // Instantiate CouponResponse record using its constructor
         return new CouponResponse(entity.getId(), entity.getType(), details);
     }
 }

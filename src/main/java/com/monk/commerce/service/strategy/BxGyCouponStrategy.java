@@ -5,6 +5,7 @@ import com.monk.commerce.annotation.CouponHandler;
 import com.monk.commerce.dto.*;
 import com.monk.commerce.entity.CouponType;
 import org.springframework.stereotype.Component;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -14,14 +15,6 @@ public class BxGyCouponStrategy implements CouponStrategy {
 
     private final ObjectMapper mapper = new ObjectMapper();
 
-    private record BxGyDetails(
-            List<Integer> buyProducts,
-            List<Integer> getProducts,
-            int buyQuantity,
-            int getQuantity,
-            int repetitionLimit
-    ) {}
-
     @Override
     public CouponType getType() {
         return CouponType.BXGY;
@@ -30,24 +23,54 @@ public class BxGyCouponStrategy implements CouponStrategy {
     @Override
     public boolean isApplicable(CartRequest cart, CouponResponse coupon) {
         var details = mapper.convertValue(coupon.details(), BxGyDetails.class);
+
+        // Extract product IDs
+        List<Integer> buyProductIds = details.buyProducts()
+                .stream()
+                .map(ProductQuantity::productId)
+                .toList();
+
+        List<Integer> getProductIds = details.getProducts()
+                .stream()
+                .map(ProductQuantity::productId)
+                .toList();
+
         int buyCount = cart.items().stream()
-                .filter(i -> details.buyProducts().contains(i.productId()))
-                .mapToInt(CartItem::quantity).sum();
+                .filter(i -> buyProductIds.contains(i.productId()))
+                .mapToInt(CartItem::quantity)
+                .sum();
+
         int getCount = cart.items().stream()
-                .filter(i -> details.getProducts().contains(i.productId()))
-                .mapToInt(CartItem::quantity).sum();
+                .filter(i -> getProductIds.contains(i.productId()))
+                .mapToInt(CartItem::quantity)
+                .sum();
+
         return buyCount >= details.buyQuantity() && getCount > 0;
     }
 
     @Override
     public double calculateDiscount(CartRequest cart, CouponResponse coupon) {
         var details = mapper.convertValue(coupon.details(), BxGyDetails.class);
+
+        List<Integer> buyProductIds = details.buyProducts()
+                .stream()
+                .map(ProductQuantity::productId)
+                .toList();
+
+        List<Integer> getProductIds = details.getProducts()
+                .stream()
+                .map(ProductQuantity::productId)
+                .toList();
+
         int buyCount = cart.items().stream()
-                .filter(i -> details.buyProducts().contains(i.productId()))
-                .mapToInt(CartItem::quantity).sum();
+                .filter(i -> buyProductIds.contains(i.productId()))
+                .mapToInt(CartItem::quantity)
+                .sum();
+
         int applicableTimes = Math.min(buyCount / details.buyQuantity(), details.repetitionLimit());
+
         List<CartItem> getItems = cart.items().stream()
-                .filter(i -> details.getProducts().contains(i.productId()))
+                .filter(i -> getProductIds.contains(i.productId()))
                 .collect(Collectors.toList());
 
         double discount = 0;
@@ -59,6 +82,7 @@ public class BxGyCouponStrategy implements CouponStrategy {
             freeItems -= free;
             if (freeItems <= 0) break;
         }
+
         return discount;
     }
 
@@ -67,9 +91,11 @@ public class BxGyCouponStrategy implements CouponStrategy {
         var details = mapper.convertValue(coupon.details(), BxGyDetails.class);
         double totalPrice = cart.items().stream().mapToDouble(i -> i.price() * i.quantity()).sum();
         double totalDiscount = calculateDiscount(cart, coupon);
+
         List<DiscountedItem> items = cart.items().stream()
-                .map(i -> new DiscountedItem(i.productId(), i.quantity(), i.price(), 0.0)) // distribute if needed
-                .collect(Collectors.toList());
+                .map(i -> new DiscountedItem(i.productId(), i.quantity(), i.price(), 0.0))
+                .toList();
+
         return new ApplyCouponResponse(items, totalPrice, totalDiscount, totalPrice - totalDiscount);
     }
 }

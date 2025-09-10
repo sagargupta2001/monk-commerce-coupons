@@ -21,7 +21,6 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-
 public class CouponServiceTest {
 
     private CouponRepository repository;
@@ -57,7 +56,6 @@ public class CouponServiceTest {
         when(repository.findAll()).thenReturn(List.of(couponEntity));
         when(repository.findById(1)).thenReturn(java.util.Optional.of(couponEntity));
 
-
         ApplicableCouponsResponse applicable = service.getApplicableCoupons(sampleCart());
         assertEquals(1, applicable.applicableCoupons().size());
         assertEquals(44.0, applicable.applicableCoupons().get(0).discount(), 0.001);
@@ -66,7 +64,6 @@ public class CouponServiceTest {
         assertEquals(440.0, applied.totalPrice(), 0.001);
         assertEquals(44.0, applied.totalDiscount(), 0.001);
         assertEquals(396.0, applied.finalPrice(), 0.001);
-
     }
 
     // ---------- Product-wise coupon ----------
@@ -92,16 +89,20 @@ public class CouponServiceTest {
         Coupon coupon = new Coupon();
         coupon.setId(3);
         coupon.setType(CouponType.BXGY);
-        coupon.setDetails("{\"buyProducts\":[1,2],\"getProducts\":[3],\"buyQuantity\":2,\"getQuantity\":1,\"repetitionLimit\":3}");
+        coupon.setDetails("""
+            {"buyProducts":[{"productId":1},{"productId":2}],
+             "getProducts":[{"productId":3}],
+             "buyQuantity":2,"getQuantity":1,"repetitionLimit":3}
+        """);
 
         when(repository.findById(3)).thenReturn(java.util.Optional.of(coupon));
 
         ApplyCouponResponse applied = service.applyCoupon(3, sampleCart());
 
-        // Buy 6 products from [1,2] => 3 times applicable
-        // Get 1 product Z free per repetition => 3 products free
+        // Buy 6 from [1,2] => 3 times applicable
+        // Get 1 product Z free per repetition => 2 free (since only 2 exist in cart)
         assertEquals(50.0, applied.totalDiscount(), 0.001);
-        assertEquals(440.0 - 50.0, applied.finalPrice(), 0.001);
+        assertEquals(390.0, applied.finalPrice(), 0.001);
     }
 
     // ---------- Applicable Coupons ----------
@@ -122,7 +123,11 @@ public class CouponServiceTest {
         Coupon c3 = Coupon.builder()
                 .id(3)
                 .type(CouponType.BXGY)
-                .details("{\"buyProducts\":[1,2],\"getProducts\":[3],\"buyQuantity\":2,\"getQuantity\":1,\"repetitionLimit\":3}")
+                .details("""
+                    {"buyProducts":[{"productId":1},{"productId":2}],
+                     "getProducts":[{"productId":3}],
+                     "buyQuantity":2,"getQuantity":1,"repetitionLimit":3}
+                """)
                 .build();
 
         when(repository.findAll()).thenReturn(List.of(c1, c2, c3));
@@ -137,14 +142,18 @@ public class CouponServiceTest {
         Coupon couponEntity = Coupon.builder()
                 .id(4)
                 .type(CouponType.BXGY)
-                .details("{\"buyProducts\":[1,2],\"getProducts\":[3],\"buyQuantity\":2,\"getQuantity\":1,\"repetitionLimit\":3}")
+                .details("""
+                    {"buyProducts":[{"productId":1},{"productId":2}],
+                     "getProducts":[{"productId":3}],
+                     "buyQuantity":2,"getQuantity":1,"repetitionLimit":3}
+                """)
                 .build();
 
         when(repository.findById(4)).thenReturn(java.util.Optional.of(couponEntity));
 
         // Cart with only 1 buy-product
         CartRequest cart = new CartRequest(List.of(
-                new CartItem(1, 1, 50.0), // only 1 of X
+                new CartItem(1, 1, 50.0),
                 new CartItem(3, 1, 25.0)
         ));
 
@@ -160,21 +169,25 @@ public class CouponServiceTest {
         Coupon couponEntity = Coupon.builder()
                 .id(5)
                 .type(CouponType.BXGY)
-                .details("{\"buyProducts\":[1,2],\"getProducts\":[3],\"buyQuantity\":2,\"getQuantity\":1,\"repetitionLimit\":3}")
+                .details("""
+                    {"buyProducts":[{"productId":1},{"productId":2}],
+                     "getProducts":[{"productId":3}],
+                     "buyQuantity":2,"getQuantity":1,"repetitionLimit":3}
+                """)
                 .build();
 
         when(repository.findById(5)).thenReturn(java.util.Optional.of(couponEntity));
 
         CartRequest cart = new CartRequest(List.of(
-                new CartItem(1, 5, 50.0), // 5 buy items
-                new CartItem(3, 2, 25.0)  // 2 get items
+                new CartItem(1, 5, 50.0),
+                new CartItem(3, 2, 25.0)
         ));
 
         ApplyCouponResponse applied = service.applyCoupon(5, cart);
 
-        // Max repetition = 2 (5/2 = 2), only 2 free products applied
-        assertEquals(2*25.0, applied.totalDiscount(), 0.001);
-        assertEquals(5*50.0 + 2*25.0 - 50.0, applied.finalPrice(), 0.001);
+        // Max repetition = 2 (5/2 = 2), only 2 freebies available
+        assertEquals(50.0, applied.totalDiscount(), 0.001);
+        assertEquals(250.0, applied.finalPrice(), 0.001);
     }
 
     // ---------- BxGy Multiple Get-products ----------
@@ -183,20 +196,24 @@ public class CouponServiceTest {
         Coupon couponEntity = Coupon.builder()
                 .id(6)
                 .type(CouponType.BXGY)
-                .details("{\"buyProducts\":[1,2],\"getProducts\":[3,4,5],\"buyQuantity\":2,\"getQuantity\":1,\"repetitionLimit\":3}")
+                .details("""
+                    {"buyProducts":[{"productId":1},{"productId":2}],
+                     "getProducts":[{"productId":3},{"productId":4},{"productId":5}],
+                     "buyQuantity":2,"getQuantity":1,"repetitionLimit":3}
+                """)
                 .build();
 
         when(repository.findById(6)).thenReturn(java.util.Optional.of(couponEntity));
 
         CartRequest cart = new CartRequest(List.of(
-                new CartItem(1, 4, 50.0), // 4 buy items
+                new CartItem(1, 4, 50.0),
                 new CartItem(3, 1, 25.0),
                 new CartItem(4, 1, 30.0)
         ));
 
         ApplyCouponResponse applied = service.applyCoupon(6, cart);
 
-        // 2 repetitions possible, should apply 2 free products from getProducts
-        assertEquals(25.0 + 30.0, applied.totalDiscount(), 0.001);
+        // 2 repetitions possible, 2 cheapest freebies applied (25 + 30)
+        assertEquals(55.0, applied.totalDiscount(), 0.001);
     }
 }

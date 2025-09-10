@@ -5,13 +5,14 @@ import com.monk.commerce.annotation.CouponHandler;
 import com.monk.commerce.dto.*;
 import com.monk.commerce.entity.CouponType;
 import org.springframework.stereotype.Component;
+
 import java.util.List;
 
 @Component
 @CouponHandler(CouponType.PRODUCT_WISE)
 public class ProductWiseCouponStrategy implements CouponStrategy {
+
     private final ObjectMapper mapper = new ObjectMapper();
-    private record ProductWiseDetails(Integer productId, double discount) {}
 
     @Override
     public CouponType getType() {
@@ -36,20 +37,25 @@ public class ProductWiseCouponStrategy implements CouponStrategy {
     @Override
     public ApplyCouponResponse applyCoupon(CartRequest cart, CouponResponse coupon) {
         var details = mapper.convertValue(coupon.details(), ProductWiseDetails.class);
+
         List<DiscountedItem> discountedItems = cart.items().stream()
                 .map(i -> {
                     double itemDiscount = 0;
-                    if (i.productId().equals(details.productId()))
+                    if (i.productId().equals(details.productId())) {
                         itemDiscount = i.price() * i.quantity() * details.discount() / 100;
+                    }
                     return new DiscountedItem(i.productId(), i.quantity(), i.price(), itemDiscount);
                 })
                 .toList();
+
         double totalPrice = cart.items().stream()
                 .mapToDouble(i -> i.price() * i.quantity())
                 .sum();
+
         double totalDiscount = discountedItems.stream()
                 .mapToDouble(DiscountedItem::totalDiscount)
                 .sum();
+
         return new ApplyCouponResponse(discountedItems, totalPrice, totalDiscount, totalPrice - totalDiscount);
     }
 }
