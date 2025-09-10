@@ -1,12 +1,14 @@
 package com.monk.commerce.service.strategy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.monk.commerce.annotation.CouponHandler;
 import com.monk.commerce.dto.*;
 import com.monk.commerce.entity.CouponType;
 import org.springframework.stereotype.Component;
 import java.util.List;
 
 @Component
+@CouponHandler(CouponType.PRODUCT_WISE)
 public class ProductWiseCouponStrategy implements CouponStrategy {
     private final ObjectMapper mapper = new ObjectMapper();
     private record ProductWiseDetails(Integer productId, double discount) {}

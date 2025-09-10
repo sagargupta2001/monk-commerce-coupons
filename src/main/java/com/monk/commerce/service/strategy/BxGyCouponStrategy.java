@@ -1,6 +1,7 @@
 package com.monk.commerce.service.strategy;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.monk.commerce.annotation.CouponHandler;
 import com.monk.commerce.dto.*;
 import com.monk.commerce.entity.CouponType;
 import org.springframework.stereotype.Component;
@@ -8,6 +9,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 @Component
+@CouponHandler(CouponType.BXGY)
 public class BxGyCouponStrategy implements CouponStrategy {
 
     private final ObjectMapper mapper = new ObjectMapper();
