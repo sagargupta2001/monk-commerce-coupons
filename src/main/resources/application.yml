@@ -1,0 +1,15 @@
+spring:
+  application:
+    name: coupons
+  datasource:
+    url: jdbc:sqlite:coupons.db
+    driver-class-name: org.sqlite.JDBC
+  jpa:
+    database-platform: org.hibernate.community.dialect.SQLiteDialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+
+server:
+  servlet:
+    context-path: /api/v1
