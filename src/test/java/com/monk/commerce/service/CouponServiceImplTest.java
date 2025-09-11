@@ -1,4 +1,4 @@
-package com.monk.commerce;
+package com.monk.commerce.service;
 
 import com.monk.commerce.dto.ApplicableCouponsResponse;
 import com.monk.commerce.dto.ApplyCouponResponse;
@@ -21,7 +21,7 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-public class CouponServiceTest {
+public class CouponServiceImplTest {
 
     private CouponRepository repository;
     private CouponServiceImpl service;
