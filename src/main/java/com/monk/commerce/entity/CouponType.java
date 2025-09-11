@@ -23,11 +23,11 @@ public enum CouponType {
     public static CouponType fromString(String type) {
         for (CouponType ct : CouponType.values()) {
             if (ct.value.equalsIgnoreCase(type)
-                    || ct.name().equalsIgnoreCase(type)
                     || type.replace("-", "_").equalsIgnoreCase(ct.name())) {
                 return ct;
             }
         }
         throw new IllegalArgumentException("Invalid coupon type: " + type);
     }
+
 }

@@ -8,6 +8,9 @@ class CouponsApplicationTests {
 
     @Test
     void contextLoads() {
+        String[] args = {};
+        CouponsApplication.main(args);
+
     }
 
 }
