@@ -11,6 +11,7 @@ is built with Spring Boot, Java 17, and uses an embedded SQLite database.
 4. [Assumptions](#assumptions)
 5. [API Endpoints](#api-endpoints)
 6. [Extensibility](#extensibility)
+7. [Test Coverage](#test-coverage)
 
 ---
 
@@ -289,3 +290,9 @@ public class NewCouponStrategy implements CouponStrategy {
 4. The factory automatically picks up the new strategy (because the strategy is annotated with @CouponHandler and
    CouponStrategyFactory maps type → strategy).
 5. Optional: Add any new fields to JSON parsing if needed (expiryDate is already supported in all CouponDetails).
+
+---
+
+## Test Coverage
+
+![img.png](img.png)
