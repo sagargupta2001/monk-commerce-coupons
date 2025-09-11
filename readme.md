@@ -211,11 +211,11 @@ is built with Spring Boot, Java 17, and uses an embedded SQLite database.
       "quantity": 1,
       "price": 350.0
     }
-  ]
-}
-  ```
+   ]
+  }
 
 - **Sample Response**:
+
   ```json
   {
     "items": [
