@@ -1,4 +1,4 @@
-package com.monk.commerce.service;
+package com.monk.commerce.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -10,7 +10,6 @@ import com.monk.commerce.dto.CartRequest;
 import com.monk.commerce.entity.Coupon;
 import com.monk.commerce.entity.CouponType;
 import com.monk.commerce.repository.CouponRepository;
-import com.monk.commerce.service.impl.CouponServiceImpl;
 import com.monk.commerce.service.strategy.BxGyCouponStrategy;
 import com.monk.commerce.service.strategy.CartWiseCouponStrategy;
 import com.monk.commerce.service.strategy.CouponStrategyFactory;

@@ -4,8 +4,8 @@ import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum CouponType {
-    CART_WISE("CART-WISE"),
-    PRODUCT_WISE("PRODUCT-WISE"),
+    CART_WISE("CART_WISE"),
+    PRODUCT_WISE("PRODUCT_WISE"),
     BXGY("BXGY");
 
     private final String value;
@@ -22,7 +22,9 @@ public enum CouponType {
     @JsonCreator
     public static CouponType fromString(String type) {
         for (CouponType ct : CouponType.values()) {
-            if (ct.value.equalsIgnoreCase(type) || ct.name().equalsIgnoreCase(type)) {
+            if (ct.value.equalsIgnoreCase(type)
+                    || ct.name().equalsIgnoreCase(type)
+                    || type.replace("-", "_").equalsIgnoreCase(ct.name())) {
                 return ct;
             }
         }
