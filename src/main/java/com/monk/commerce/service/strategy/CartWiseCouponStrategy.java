@@ -11,7 +11,6 @@ import java.util.List;
 @CouponHandler(CouponType.CART_WISE)
 public class CartWiseCouponStrategy implements CouponStrategy {
     private final ObjectMapper mapper = new ObjectMapper();
-    private record CartWiseDetails(double threshold, double discount) {}
 
     @Override
     public CouponType getType() {

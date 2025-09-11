@@ -90,10 +90,12 @@ public class CouponServiceImplTest {
         coupon.setId(3);
         coupon.setType(CouponType.BXGY);
         coupon.setDetails("""
-            {"buyProducts":[{"productId":1},{"productId":2}],
-             "getProducts":[{"productId":3}],
-             "buyQuantity":2,"getQuantity":1,"repetitionLimit":3}
-        """);
+                    {
+                      "buyProducts":[{"productId":1,"quantity":2},{"productId":2,"quantity":2}],
+                      "getProducts":[{"productId":3,"quantity":1}],
+                      "repetitionLimit":3
+                    }
+                """);
 
         when(repository.findById(3)).thenReturn(java.util.Optional.of(coupon));
 
@@ -101,8 +103,8 @@ public class CouponServiceImplTest {
 
         // Buy 6 from [1,2] => 3 times applicable
         // Get 1 product Z free per repetition => 2 free (since only 2 exist in cart)
-        assertEquals(50.0, applied.totalDiscount(), 0.001);
-        assertEquals(390.0, applied.finalPrice(), 0.001);
+        assertEquals(25.0, applied.totalDiscount(), 0.001);
+        assertEquals(415.0, applied.finalPrice(), 0.001);
     }
 
     // ---------- Applicable Coupons ----------
@@ -124,10 +126,12 @@ public class CouponServiceImplTest {
                 .id(3)
                 .type(CouponType.BXGY)
                 .details("""
-                    {"buyProducts":[{"productId":1},{"productId":2}],
-                     "getProducts":[{"productId":3}],
-                     "buyQuantity":2,"getQuantity":1,"repetitionLimit":3}
-                """)
+                            {
+                              "buyProducts":[{"productId":1,"quantity":2},{"productId":2,"quantity":2}],
+                              "getProducts":[{"productId":3,"quantity":1}],
+                              "repetitionLimit":3
+                            }
+                        """)
                 .build();
 
         when(repository.findAll()).thenReturn(List.of(c1, c2, c3));
@@ -143,10 +147,12 @@ public class CouponServiceImplTest {
                 .id(4)
                 .type(CouponType.BXGY)
                 .details("""
-                    {"buyProducts":[{"productId":1},{"productId":2}],
-                     "getProducts":[{"productId":3}],
-                     "buyQuantity":2,"getQuantity":1,"repetitionLimit":3}
-                """)
+                            {
+                              "buyProducts":[{"productId":1,"quantity":2},{"productId":2,"quantity":2}],
+                              "getProducts":[{"productId":3,"quantity":1}],
+                              "repetitionLimit":3
+                            }
+                        """)
                 .build();
 
         when(repository.findById(4)).thenReturn(java.util.Optional.of(couponEntity));
@@ -170,10 +176,12 @@ public class CouponServiceImplTest {
                 .id(5)
                 .type(CouponType.BXGY)
                 .details("""
-                    {"buyProducts":[{"productId":1},{"productId":2}],
-                     "getProducts":[{"productId":3}],
-                     "buyQuantity":2,"getQuantity":1,"repetitionLimit":3}
-                """)
+                            {
+                              "buyProducts":[{"productId":1,"quantity":2}],
+                              "getProducts":[{"productId":3,"quantity":1}],
+                              "repetitionLimit":3
+                            }
+                        """)
                 .build();
 
         when(repository.findById(5)).thenReturn(java.util.Optional.of(couponEntity));
@@ -197,10 +205,16 @@ public class CouponServiceImplTest {
                 .id(6)
                 .type(CouponType.BXGY)
                 .details("""
-                    {"buyProducts":[{"productId":1},{"productId":2}],
-                     "getProducts":[{"productId":3},{"productId":4},{"productId":5}],
-                     "buyQuantity":2,"getQuantity":1,"repetitionLimit":3}
-                """)
+                            {
+                              "buyProducts":[{"productId":1,"quantity":2}],
+                              "getProducts":[
+                                {"productId":3,"quantity":1},
+                                {"productId":4,"quantity":1},
+                                {"productId":5,"quantity":1}
+                              ],
+                              "repetitionLimit":3
+                            }
+                        """)
                 .build();
 
         when(repository.findById(6)).thenReturn(java.util.Optional.of(couponEntity));

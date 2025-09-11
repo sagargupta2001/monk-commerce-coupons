@@ -6,7 +6,7 @@ import com.monk.commerce.dto.*;
 import com.monk.commerce.entity.CouponType;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Component
@@ -24,63 +24,61 @@ public class BxGyCouponStrategy implements CouponStrategy {
     public boolean isApplicable(CartRequest cart, CouponResponse coupon) {
         var details = mapper.convertValue(coupon.details(), BxGyDetails.class);
 
-        // Extract product IDs
-        List<Integer> buyProductIds = details.buyProducts()
-                .stream()
-                .map(ProductQuantity::productId)
-                .toList();
+        // Check if all buyProducts conditions are met
+        boolean hasAllBuys = details.buyProducts().stream().allMatch(req -> {
+            int qtyInCart = cart.items().stream()
+                    .filter(i -> i.productId() == req.productId())
+                    .mapToInt(CartItem::quantity)
+                    .sum();
+            return qtyInCart >= req.quantity();
+        });
 
-        List<Integer> getProductIds = details.getProducts()
-                .stream()
-                .map(ProductQuantity::productId)
-                .toList();
+        // Check if at least one getProduct exists in cart
+        boolean hasGetProduct = cart.items().stream()
+                .anyMatch(i -> details.getProducts().stream()
+                        .anyMatch(gp -> gp.productId() == i.productId()));
 
-        int buyCount = cart.items().stream()
-                .filter(i -> buyProductIds.contains(i.productId()))
-                .mapToInt(CartItem::quantity)
-                .sum();
-
-        int getCount = cart.items().stream()
-                .filter(i -> getProductIds.contains(i.productId()))
-                .mapToInt(CartItem::quantity)
-                .sum();
-
-        return buyCount >= details.buyQuantity() && getCount > 0;
+        return hasAllBuys && hasGetProduct;
     }
 
     @Override
     public double calculateDiscount(CartRequest cart, CouponResponse coupon) {
         var details = mapper.convertValue(coupon.details(), BxGyDetails.class);
 
-        List<Integer> buyProductIds = details.buyProducts()
-                .stream()
-                .map(ProductQuantity::productId)
-                .toList();
+        // Calculate how many times offer can apply (based on min ratio of buyProducts)
+        int maxApplications = details.repetitionLimit();
 
-        List<Integer> getProductIds = details.getProducts()
-                .stream()
-                .map(ProductQuantity::productId)
-                .toList();
+        for (ProductQuantity req : details.buyProducts()) {
+            int qtyInCart = cart.items().stream()
+                    .filter(i -> i.productId() == req.productId())
+                    .mapToInt(CartItem::quantity)
+                    .sum();
+            int possibleApplications = qtyInCart / req.quantity();
+            maxApplications = Math.min(maxApplications, possibleApplications);
+        }
 
-        int buyCount = cart.items().stream()
-                .filter(i -> buyProductIds.contains(i.productId()))
-                .mapToInt(CartItem::quantity)
-                .sum();
+        if (maxApplications <= 0) return 0.0;
 
-        int applicableTimes = Math.min(buyCount / details.buyQuantity(), details.repetitionLimit());
-
+        // Now calculate free items
         List<CartItem> getItems = cart.items().stream()
-                .filter(i -> getProductIds.contains(i.productId()))
+                .filter(i -> details.getProducts().stream()
+                        .anyMatch(gp -> gp.productId() == i.productId()))
                 .collect(Collectors.toList());
 
-        double discount = 0;
-        int freeItems = applicableTimes * details.getQuantity();
+        double discount = 0.0;
+        int finalMaxApplications = maxApplications;
+        int totalFreeItems = details.getProducts().stream()
+                .mapToInt(gp -> gp.quantity() * finalMaxApplications)
+                .sum();
+
+        // Sort getItems by price ascending (maximize savings for customer)
+        getItems.sort(Comparator.comparingDouble(CartItem::price));
 
         for (CartItem gi : getItems) {
-            int free = Math.min(freeItems, gi.quantity());
+            int free = Math.min(totalFreeItems, gi.quantity());
             discount += gi.price() * free;
-            freeItems -= free;
-            if (freeItems <= 0) break;
+            totalFreeItems -= free;
+            if (totalFreeItems <= 0) break;
         }
 
         return discount;
@@ -88,7 +86,6 @@ public class BxGyCouponStrategy implements CouponStrategy {
 
     @Override
     public ApplyCouponResponse applyCoupon(CartRequest cart, CouponResponse coupon) {
-        var details = mapper.convertValue(coupon.details(), BxGyDetails.class);
         double totalPrice = cart.items().stream().mapToDouble(i -> i.price() * i.quantity()).sum();
         double totalDiscount = calculateDiscount(cart, coupon);
 
