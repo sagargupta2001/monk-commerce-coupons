@@ -1,7 +1,10 @@
 package com.monk.commerce.exception;
 
-public class CouponExpiredException extends RuntimeException {
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
+
+public class CouponExpiredException extends ResponseStatusException {
     public CouponExpiredException(Integer couponId) {
-        super("Coupon " + couponId + " has expired");
+        super(HttpStatus.BAD_REQUEST, "Coupon " + couponId + " has expired");
     }
 }

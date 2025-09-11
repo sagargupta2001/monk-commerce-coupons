@@ -128,7 +128,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"items\": [\n    {\"productId\":1,\"quantity\":6,\"price\":50},\n    {\"productId\":2,\"quantity\":3,\"price\":30},\n    {\"productId\":3,\"quantity\":2,\"price\":25}\n  ]\n}",
+					"raw": "{\n    \"items\": [\n        {\n            \"productId\": 1,\n            \"quantity\": 6,\n            \"price\": 50\n        },\n        {\n            \"productId\": 2,\n            \"quantity\": 3,\n            \"price\": 30\n        },\n        {\n            \"productId\": 3,\n            \"quantity\": 2,\n            \"price\": 25\n        }\n    ]\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -162,7 +162,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"items\": [\n    {\"productId\":1,\"quantity\":6,\"price\":50},\n    {\"productId\":2,\"quantity\":3,\"price\":30},\n    {\"productId\":3,\"quantity\":2,\"price\":25}\n  ]\n}",
+					"raw": "{\n    \"items\": [\n        {\n            \"productId\": 1,\n            \"quantity\": 6,\n            \"price\": 50\n        },\n        {\n            \"productId\": 2,\n            \"quantity\": 3,\n            \"price\": 30\n        },\n        {\n            \"productId\": 3,\n            \"quantity\": 2,\n            \"price\": 25\n        }\n    ]\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -170,7 +170,7 @@
 					}
 				},
 				"url": {
-					"raw": "{{baseURL}}/api/v1/coupons/apply-coupon/1",
+					"raw": "{{baseURL}}/api/v1/coupons/apply-coupon/2",
 					"host": [
 						"{{baseURL}}"
 					],
@@ -179,7 +179,7 @@
 						"v1",
 						"coupons",
 						"apply-coupon",
-						"1"
+						"2"
 					]
 				}
 			},
@@ -228,7 +228,7 @@
 				],
 				"body": {
 					"mode": "raw",
-					"raw": "{\n  \"type\": \"BXGY\",\n  \"details\": {\n    \"buyProducts\": [{\"productId\":1},{\"productId\":2}],\n    \"getProducts\": [{\"productId\":3}],\n    \"buyQuantity\": 3,\n    \"getQuantity\": 1,\n    \"repetitionLimit\": 2\n  }\n}",
+					"raw": "{\n    \"type\": \"BXGY\",\n    \"details\": {\n        \"buyProducts\": [\n            {\n                \"productId\": 1,\n                \"quantity\": 3\n            },\n            {\n                \"productId\": 2,\n                \"quantity\": 3\n            }\n        ],\n        \"getProducts\": [\n            {\n                \"productId\": 3,\n                \"quantity\": 1\n            }\n        ],\n        \"repetitionLimit\": 2\n    }\n}",
 					"options": {
 						"raw": {
 							"language": "json"
@@ -271,6 +271,44 @@
 					"host": [
 						"{{baseURL}}"
 					],
+					"path": [
+						"api",
+						"v1",
+						"coupons"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "Create Expired Coupon",
+			"request": {
+				"auth": {
+					"type": "noauth"
+				},
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n  \"type\": \"CART_WISE\",\n  \"details\": {\n    \"threshold\": 100,\n    \"discount\": 10,\n    \"expiryDate\": \"2025-09-10\"\n  }\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "http://localhost:8080/api/v1/coupons",
+					"protocol": "http",
+					"host": [
+						"localhost"
+					],
+					"port": "8080",
 					"path": [
 						"api",
 						"v1",
