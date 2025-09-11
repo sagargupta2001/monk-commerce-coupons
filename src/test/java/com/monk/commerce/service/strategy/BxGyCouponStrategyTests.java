@@ -182,4 +182,5 @@ class BxGyCouponStrategyTests {
 
         assertFalse(strategy.isApplicable(cart, coupon)); // covers false branch of hasAllBuys && hasGetProduct
     }
+
 }

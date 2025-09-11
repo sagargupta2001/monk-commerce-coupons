@@ -16,12 +16,7 @@ public interface CouponStrategy {
     CouponType getType();
 
     default boolean isExpired(CouponResponse coupon) {
-        CouponDetails details = coupon.details();
-        LocalDate expiry = null;
-        if (details instanceof CartWiseDetails d) expiry = d.expiryDate();
-        else if (details instanceof ProductWiseDetails d) expiry = d.expiryDate();
-        else if (details instanceof BxGyDetails d) expiry = d.expiryDate();
-
+        LocalDate expiry = coupon.details().expiryDate();
         return expiry != null && expiry.isBefore(LocalDate.now());
     }
 }
