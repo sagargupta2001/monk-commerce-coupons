@@ -3,12 +3,10 @@ package com.monk.commerce.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.monk.commerce.dto.ApplicableCouponsResponse;
-import com.monk.commerce.dto.ApplyCouponResponse;
-import com.monk.commerce.dto.CartItem;
-import com.monk.commerce.dto.CartRequest;
+import com.monk.commerce.dto.*;
 import com.monk.commerce.entity.Coupon;
 import com.monk.commerce.entity.CouponType;
+import com.monk.commerce.exception.CouponNotFoundException;
 import com.monk.commerce.repository.CouponRepository;
 import com.monk.commerce.service.strategy.BxGyCouponStrategy;
 import com.monk.commerce.service.strategy.CartWiseCouponStrategy;
@@ -17,11 +15,13 @@ import com.monk.commerce.service.strategy.ProductWiseCouponStrategy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 
 public class CouponServiceImplTest {
 
@@ -31,12 +31,9 @@ public class CouponServiceImplTest {
     @BeforeEach
     void setUp() {
         repository = mock(CouponRepository.class);
-
-        // Create a real ObjectMapper and register JavaTimeModule for LocalDate
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-
         CouponStrategyFactory factory = new CouponStrategyFactory(List.of(
                 new CartWiseCouponStrategy(mapper),
                 new ProductWiseCouponStrategy(mapper),
@@ -53,7 +50,6 @@ public class CouponServiceImplTest {
         ));
     }
 
-    // ---------- Cart-wise coupon ----------
     @Test
     void testCartWiseCoupon() {
         Coupon couponEntity = new Coupon();
@@ -74,7 +70,6 @@ public class CouponServiceImplTest {
         assertEquals(396.0, applied.finalPrice(), 0.001);
     }
 
-    // ---------- Product-wise coupon ----------
     @Test
     void testProductWiseCoupon() {
         Coupon coupon = new Coupon();
@@ -91,7 +86,6 @@ public class CouponServiceImplTest {
         assertEquals(380.0, applied.finalPrice(), 0.001);
     }
 
-    // ---------- BxGy coupon ----------
     @Test
     void testBxGyCoupon() {
         Coupon coupon = new Coupon();
@@ -115,7 +109,6 @@ public class CouponServiceImplTest {
         assertEquals(415.0, applied.finalPrice(), 0.001);
     }
 
-    // ---------- Applicable Coupons ----------
     @Test
     void testApplicableCoupons() {
         Coupon c1 = Coupon.builder()
@@ -148,7 +141,6 @@ public class CouponServiceImplTest {
         assertEquals(3, applicable.applicableCoupons().size());
     }
 
-    // ---------- BxGy Not Applicable Coupons ----------
     @Test
     void testBxGyNotApplicable() {
         Coupon couponEntity = Coupon.builder()
@@ -177,7 +169,6 @@ public class CouponServiceImplTest {
         assertEquals(75.0, applied.finalPrice(), 0.001);
     }
 
-    // ---------- BxGy Partial Repetition ----------
     @Test
     void testBxGyPartialRepetition() {
         Coupon couponEntity = Coupon.builder()
@@ -206,7 +197,6 @@ public class CouponServiceImplTest {
         assertEquals(250.0, applied.finalPrice(), 0.001);
     }
 
-    // ---------- BxGy Multiple Get-products ----------
     @Test
     void testBxGyMultipleGetProducts() {
         Coupon couponEntity = Coupon.builder()
@@ -238,4 +228,136 @@ public class CouponServiceImplTest {
         // 2 repetitions possible, 2 cheapest freebies applied (25 + 30)
         assertEquals(55.0, applied.totalDiscount(), 0.001);
     }
+
+    @Test
+    void testCreateCoupon() {
+        CouponRequest request = new CouponRequest(
+                CouponType.CART_WISE,
+                new CartWiseDetails(200.0, 15.0, null)
+        );
+
+        // Stub repository save
+        when(repository.save(any(Coupon.class))).thenAnswer(inv -> {
+            Coupon c = inv.getArgument(0);
+            c.setId(1);
+            return c;
+        });
+
+        CouponResponse response = service.createCoupon(request);
+
+        assertNotNull(response);
+        assertEquals(CouponType.CART_WISE, response.type());
+        CartWiseDetails details = (CartWiseDetails) response.details();
+        assertEquals(200.0, details.threshold());
+        assertEquals(15.0, details.discount());
+    }
+
+    @Test
+    void testUpdateCoupon() {
+        Coupon existing = new Coupon();
+        existing.setId(1);
+        existing.setType(CouponType.CART_WISE);
+        existing.setDetails("{\"threshold\":100,\"discount\":10}");
+
+        when(repository.findById(1)).thenReturn(Optional.of(existing));
+        when(repository.save(any(Coupon.class))).thenAnswer(inv -> inv.getArgument(0));
+
+        CouponRequest updateRequest = new CouponRequest(
+                CouponType.CART_WISE,
+                new CartWiseDetails(300.0, 20.0, null)
+        );
+
+        CouponResponse updated = service.updateCoupon(1, updateRequest);
+
+        assertNotNull(updated);
+        CartWiseDetails details = (CartWiseDetails) updated.details();
+        assertEquals(300.0, details.threshold());
+        assertEquals(20.0, details.discount());
+    }
+
+    @Test
+    void testDeleteCoupon() {
+        doNothing().when(repository).deleteById(1);
+
+        service.deleteCoupon(1);
+
+        verify(repository, times(1)).deleteById(1);
+    }
+
+    @Test
+    void testGetCouponNotFound() {
+        when(repository.findById(99)).thenReturn(Optional.empty());
+
+        assertThrows(CouponNotFoundException.class, () -> service.getCoupon(99));
+    }
+
+    @Test
+    void testToResponseParsingFailure() {
+        Coupon bad = new Coupon();
+        bad.setId(42);
+        bad.setType(CouponType.CART_WISE);
+        bad.setDetails("invalid-json"); // invalid JSON triggers exception
+
+        // repository not used here, directly call private logic through public API
+        when(repository.findById(42)).thenReturn(Optional.of(bad));
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> service.getCoupon(42));
+        assertTrue(ex.getMessage().contains("Failed to parse coupon details"));
+    }
+
+    @Test
+    void testCreateCouponSerializationFailure() throws Exception {
+        // Create a normal CouponRequest
+        CouponRequest request = new CouponRequest(CouponType.CART_WISE, new CartWiseDetails(100, 10, LocalDate.now()));
+
+        // Spy on ObjectMapper to throw exception on writeValueAsString
+        ObjectMapper mapperSpy = spy(service.mapper); // assuming service.mapper is accessible
+        doThrow(new RuntimeException("Forced serialization failure"))
+                .when(mapperSpy).writeValueAsString(any());
+
+        // Inject spy into service
+        CouponServiceImpl serviceWithSpy = new CouponServiceImpl(repository, service.factory, mapperSpy);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> serviceWithSpy.createCoupon(request));
+        assertEquals("Forced serialization failure", ex.getCause().getMessage());
+    }
+
+    @Test
+    void testUpdateCouponSerializationFailure() throws Exception {
+        Coupon existing = new Coupon();
+        existing.setId(1);
+        existing.setType(CouponType.CART_WISE);
+        when(repository.findById(1)).thenReturn(Optional.of(existing));
+
+        CouponRequest request = new CouponRequest(CouponType.CART_WISE, new CartWiseDetails(100, 10, LocalDate.now()));
+
+        ObjectMapper mapperSpy = spy(service.mapper);
+        doThrow(new RuntimeException("Forced serialization failure"))
+                .when(mapperSpy).writeValueAsString(any());
+
+        CouponServiceImpl serviceWithSpy = new CouponServiceImpl(repository, service.factory, mapperSpy);
+
+        RuntimeException ex = assertThrows(RuntimeException.class, () -> serviceWithSpy.updateCoupon(1, request));
+        assertEquals("Forced serialization failure", ex.getCause().getMessage());
+    }
+
+    @Test
+    void testGetAllCouponsCoversMapping() {
+        Coupon c1 = Coupon.builder()
+                .id(10)
+                .type(CouponType.CART_WISE)
+                .details("{\"threshold\":200,\"discount\":20}")
+                .build();
+
+        when(repository.findAll()).thenReturn(List.of(c1));
+
+        List<CouponResponse> responses = service.getAllCoupons();
+
+        assertEquals(1, responses.size());
+        assertEquals(CouponType.CART_WISE, responses.get(0).type());
+        CartWiseDetails details = (CartWiseDetails) responses.get(0).details();
+        assertEquals(200.0, details.threshold());
+        assertEquals(20.0, details.discount());
+    }
+
 }

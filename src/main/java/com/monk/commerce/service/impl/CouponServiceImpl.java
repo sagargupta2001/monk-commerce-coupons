@@ -16,8 +16,8 @@ import java.util.List;
 public class CouponServiceImpl implements CouponService {
 
     private final CouponRepository repository;
-    private final CouponStrategyFactory factory;
-    private final ObjectMapper mapper;
+    final CouponStrategyFactory factory;
+    final ObjectMapper mapper;
 
     public CouponServiceImpl(CouponRepository repository, CouponStrategyFactory factory, ObjectMapper mapper) {
         this.repository = repository;
