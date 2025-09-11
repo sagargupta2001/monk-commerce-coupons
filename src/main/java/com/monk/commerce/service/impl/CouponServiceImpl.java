@@ -17,17 +17,19 @@ public class CouponServiceImpl implements CouponService {
 
     private final CouponRepository repository;
     private final CouponStrategyFactory factory;
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper;
 
-    public CouponServiceImpl(CouponRepository repository, CouponStrategyFactory factory) {
+    public CouponServiceImpl(CouponRepository repository, CouponStrategyFactory factory, ObjectMapper mapper) {
         this.repository = repository;
         this.factory = factory;
+        this.mapper = mapper;
     }
 
     @Override
     public CouponResponse createCoupon(CouponRequest request) {
         Coupon entity = new Coupon();
         entity.setType(request.type());
+        entity.setExpiryDate(request.details().expiryDate());
         try {
             entity.setDetails(mapper.writeValueAsString(request.details()));
         } catch (Exception e) {
@@ -51,6 +53,7 @@ public class CouponServiceImpl implements CouponService {
     public CouponResponse updateCoupon(Integer id, CouponRequest request) {
         Coupon entity = repository.findById(id).orElseThrow(() -> new CouponNotFoundException(id));
         entity.setType(request.type());
+        entity.setExpiryDate(request.details().expiryDate());
         try {
             entity.setDetails(mapper.writeValueAsString(request.details()));
         } catch (Exception e) {
@@ -88,11 +91,24 @@ public class CouponServiceImpl implements CouponService {
     }
 
     private CouponResponse toResponse(Coupon entity) {
-        Object details;
+        CouponDetails details;
         try {
-            details = mapper.readValue(entity.getDetails(), Object.class);
+            details = switch (entity.getType()) {
+                case CART_WISE -> {
+                    var d = mapper.readValue(entity.getDetails(), CartWiseDetails.class);
+                    yield new CartWiseDetails(d.threshold(), d.discount(), entity.getExpiryDate());
+                }
+                case PRODUCT_WISE -> {
+                    var d = mapper.readValue(entity.getDetails(), ProductWiseDetails.class);
+                    yield new ProductWiseDetails(d.productId(), d.discount(), entity.getExpiryDate());
+                }
+                case BXGY -> {
+                    var d = mapper.readValue(entity.getDetails(), BxGyDetails.class);
+                    yield new BxGyDetails(d.buyProducts(), d.getProducts(), d.repetitionLimit(), entity.getExpiryDate());
+                }
+            };
         } catch (Exception e) {
-            details = null;
+            throw new RuntimeException("Failed to parse coupon details", e);
         }
         return new CouponResponse(entity.getId(), entity.getType(), details);
     }

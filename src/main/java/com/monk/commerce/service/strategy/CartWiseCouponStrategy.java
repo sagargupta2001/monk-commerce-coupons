@@ -4,13 +4,18 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.monk.commerce.annotation.CouponHandler;
 import com.monk.commerce.dto.*;
 import com.monk.commerce.entity.CouponType;
+import com.monk.commerce.exception.CouponExpiredException;
 import org.springframework.stereotype.Component;
 import java.util.List;
 
 @Component
 @CouponHandler(CouponType.CART_WISE)
 public class CartWiseCouponStrategy implements CouponStrategy {
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper;
+
+    public CartWiseCouponStrategy(ObjectMapper mapper) {
+        this.mapper = mapper;
+    }
 
     @Override
     public CouponType getType() {
@@ -19,6 +24,7 @@ public class CartWiseCouponStrategy implements CouponStrategy {
 
     @Override
     public boolean isApplicable(CartRequest cart, CouponResponse coupon) {
+        if (isExpired(coupon)) return false;
         try {
             var details = mapper.convertValue(coupon.details(), CartWiseDetails.class);
             double total = cart.items().stream().mapToDouble(i -> i.price() * i.quantity()).sum();
@@ -37,6 +43,7 @@ public class CartWiseCouponStrategy implements CouponStrategy {
 
     @Override
     public ApplyCouponResponse applyCoupon(CartRequest cart, CouponResponse coupon) {
+        if (isExpired(coupon)) throw new CouponExpiredException(coupon.id());;
         double discount = calculateDiscount(cart, coupon);
         double total = cart.items().stream().mapToDouble(i -> i.price() * i.quantity()).sum();
         List<DiscountedItem> discountedItems = cart.items().stream().map(i ->

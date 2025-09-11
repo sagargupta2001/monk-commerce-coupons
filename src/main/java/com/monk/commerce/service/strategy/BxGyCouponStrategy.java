@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.monk.commerce.annotation.CouponHandler;
 import com.monk.commerce.dto.*;
 import com.monk.commerce.entity.CouponType;
+import com.monk.commerce.exception.CouponExpiredException;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -13,7 +14,11 @@ import java.util.stream.Collectors;
 @CouponHandler(CouponType.BXGY)
 public class BxGyCouponStrategy implements CouponStrategy {
 
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper;
+
+    public BxGyCouponStrategy(ObjectMapper mapper) {
+        this.mapper = mapper;
+    }
 
     @Override
     public CouponType getType() {
@@ -22,12 +27,13 @@ public class BxGyCouponStrategy implements CouponStrategy {
 
     @Override
     public boolean isApplicable(CartRequest cart, CouponResponse coupon) {
+        if (isExpired(coupon)) return false;
         var details = mapper.convertValue(coupon.details(), BxGyDetails.class);
 
         // Check if all buyProducts conditions are met
         boolean hasAllBuys = details.buyProducts().stream().allMatch(req -> {
             int qtyInCart = cart.items().stream()
-                    .filter(i -> i.productId() == req.productId())
+                    .filter(i -> Objects.equals(i.productId(), req.productId()))
                     .mapToInt(CartItem::quantity)
                     .sum();
             return qtyInCart >= req.quantity();
@@ -36,7 +42,7 @@ public class BxGyCouponStrategy implements CouponStrategy {
         // Check if at least one getProduct exists in cart
         boolean hasGetProduct = cart.items().stream()
                 .anyMatch(i -> details.getProducts().stream()
-                        .anyMatch(gp -> gp.productId() == i.productId()));
+                        .anyMatch(gp -> Objects.equals(gp.productId(), i.productId())));
 
         return hasAllBuys && hasGetProduct;
     }
@@ -50,7 +56,7 @@ public class BxGyCouponStrategy implements CouponStrategy {
 
         for (ProductQuantity req : details.buyProducts()) {
             int qtyInCart = cart.items().stream()
-                    .filter(i -> i.productId() == req.productId())
+                    .filter(i -> Objects.equals(i.productId(), req.productId()))
                     .mapToInt(CartItem::quantity)
                     .sum();
             int possibleApplications = qtyInCart / req.quantity();
@@ -62,7 +68,7 @@ public class BxGyCouponStrategy implements CouponStrategy {
         // Now calculate free items
         List<CartItem> getItems = cart.items().stream()
                 .filter(i -> details.getProducts().stream()
-                        .anyMatch(gp -> gp.productId() == i.productId()))
+                        .anyMatch(gp -> Objects.equals(gp.productId(), i.productId())))
                 .collect(Collectors.toList());
 
         double discount = 0.0;
@@ -86,6 +92,7 @@ public class BxGyCouponStrategy implements CouponStrategy {
 
     @Override
     public ApplyCouponResponse applyCoupon(CartRequest cart, CouponResponse coupon) {
+        if (isExpired(coupon)) throw new CouponExpiredException(coupon.id());;
         double totalPrice = cart.items().stream().mapToDouble(i -> i.price() * i.quantity()).sum();
         double totalDiscount = calculateDiscount(cart, coupon);
 

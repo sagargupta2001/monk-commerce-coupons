@@ -5,5 +5,5 @@ import com.monk.commerce.entity.CouponType;
 public record CouponResponse(
         Integer id,
         CouponType type,
-        Object details
+        CouponDetails details
 ) {}

@@ -1,5 +1,8 @@
 package com.monk.commerce.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.monk.commerce.dto.ApplicableCouponsResponse;
 import com.monk.commerce.dto.ApplyCouponResponse;
 import com.monk.commerce.dto.CartItem;
@@ -29,12 +32,18 @@ public class CouponServiceImplTest {
     @BeforeEach
     void setUp() {
         repository = mock(CouponRepository.class);
+
+        // Create a real ObjectMapper and register JavaTimeModule for LocalDate
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.registerModule(new JavaTimeModule());
+        mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
         CouponStrategyFactory factory = new CouponStrategyFactory(List.of(
-                new CartWiseCouponStrategy(),
-                new ProductWiseCouponStrategy(),
-                new BxGyCouponStrategy()
+                new CartWiseCouponStrategy(mapper),
+                new ProductWiseCouponStrategy(mapper),
+                new BxGyCouponStrategy(mapper)
         ));
-        service = new CouponServiceImpl(repository, factory);
+        service = new CouponServiceImpl(repository, factory, mapper);
     }
 
     private CartRequest sampleCart() {
