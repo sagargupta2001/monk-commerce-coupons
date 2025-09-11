@@ -1,5 +1,6 @@
 package com.monk.commerce.service.impl;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -15,7 +16,6 @@ import com.monk.commerce.service.strategy.ProductWiseCouponStrategy;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,20 +27,26 @@ public class CouponServiceImplTest {
 
     private CouponRepository repository;
     private CouponServiceImpl service;
+    private ObjectMapper mapper;
+
 
     @BeforeEach
     void setUp() {
         repository = mock(CouponRepository.class);
-        ObjectMapper mapper = new ObjectMapper();
+
+        mapper = spy(new ObjectMapper());
         mapper.registerModule(new JavaTimeModule());
         mapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
+
         CouponStrategyFactory factory = new CouponStrategyFactory(List.of(
                 new CartWiseCouponStrategy(mapper),
                 new ProductWiseCouponStrategy(mapper),
                 new BxGyCouponStrategy(mapper)
         ));
+
         service = new CouponServiceImpl(repository, factory, mapper);
     }
+
 
     private CartRequest sampleCart() {
         return new CartRequest(List.of(
@@ -307,38 +313,41 @@ public class CouponServiceImplTest {
 
     @Test
     void testCreateCouponSerializationFailure() throws Exception {
-        // Create a normal CouponRequest
-        CouponRequest request = new CouponRequest(CouponType.CART_WISE, new CartWiseDetails(100, 10, LocalDate.now()));
+        CouponRequest request = new CouponRequest(
+                CouponType.CART_WISE,
+                new CartWiseDetails(100.0, 10.0, null)
+        );
 
-        // Spy on ObjectMapper to throw exception on writeValueAsString
-        ObjectMapper mapperSpy = spy(service.mapper); // assuming service.mapper is accessible
-        doThrow(new RuntimeException("Forced serialization failure"))
-                .when(mapperSpy).writeValueAsString(any());
+        // make mapper throw exception when serializing
+        doThrow(new JsonProcessingException("Serialization failed") {}).when(mapper).writeValueAsString(any());
 
-        // Inject spy into service
-        CouponServiceImpl serviceWithSpy = new CouponServiceImpl(repository, service.factory, mapperSpy);
+        assertThrows(RuntimeException.class, () -> service.createCoupon(request));
 
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> serviceWithSpy.createCoupon(request));
-        assertEquals("Forced serialization failure", ex.getCause().getMessage());
+        // repository.save should never be called
+        verify(repository, never()).save(any());
     }
 
+    // ----------------- updateCoupon catch block -----------------
     @Test
     void testUpdateCouponSerializationFailure() throws Exception {
         Coupon existing = new Coupon();
         existing.setId(1);
         existing.setType(CouponType.CART_WISE);
+        existing.setDetails("{\"threshold\":50,\"discount\":5}");
+
         when(repository.findById(1)).thenReturn(Optional.of(existing));
 
-        CouponRequest request = new CouponRequest(CouponType.CART_WISE, new CartWiseDetails(100, 10, LocalDate.now()));
+        CouponRequest request = new CouponRequest(
+                CouponType.CART_WISE,
+                new CartWiseDetails(200.0, 15.0, null)
+        );
 
-        ObjectMapper mapperSpy = spy(service.mapper);
-        doThrow(new RuntimeException("Forced serialization failure"))
-                .when(mapperSpy).writeValueAsString(any());
+        doThrow(new JsonProcessingException("Serialization failed") {}).when(mapper).writeValueAsString(any());
 
-        CouponServiceImpl serviceWithSpy = new CouponServiceImpl(repository, service.factory, mapperSpy);
+        assertThrows(RuntimeException.class, () -> service.updateCoupon(1, request));
 
-        RuntimeException ex = assertThrows(RuntimeException.class, () -> serviceWithSpy.updateCoupon(1, request));
-        assertEquals("Forced serialization failure", ex.getCause().getMessage());
+        // repository.save should never be called
+        verify(repository, never()).save(any());
     }
 
     @Test

@@ -24,8 +24,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(CouponController.class)
-@Import(CouponControllerTest.MockConfig.class)
-class CouponControllerTest {
+@Import(CouponControllerTests.MockConfig.class)
+class CouponControllerTests {
 
     @Autowired
     private MockMvc mockMvc;
