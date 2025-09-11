@@ -3,45 +3,74 @@
 This project is a RESTful API for managing and applying various types of discount coupons for an e-commerce platform. It is built with Spring Boot, Java 17, and uses an embedded SQLite database.
 
 ## Table of Contents
-1.  [Core Concepts & Architecture](#core-concepts--architecture)
-2.  [Tech Stack](#tech-stack)
-3.  [API Endpoints](#api-endpoints)
-4.  [How to Run the Application](#how-to-run-the-application)
-5.  [Coupon Use Cases & Scenarios](#coupon-use-cases--scenarios)
-6.  [Assumptions](#assumptions)
-7.  [Limitations & Future Improvements](#limitations--future-improvements)
+1.  [Implemented Cases](#implemented-cases)
+2.  [Unimplemented Cases](#unimplemented-cases)
+3.  [Limitations](#limitations)
+4.  [Assumptions](#assumptions)
+5.  [API Endpoints](#api-endpoints)
 
 ---
 
-## Core Concepts & Architecture
+## Implemented Cases
 
-The application is designed using **Clean Architecture** principles to ensure a clear separation of concerns, making it highly maintainable and scalable.
+### 1. Cart-Wise Coupons
+- Provides a discount when the total cart value exceeds a specified threshold.
+- Example: If the threshold is ₹100 and the discount is 10%, then a cart worth ₹440 gets a discount of ₹44.
 
--   **Domain**: Contains the core business logic and models, free from any framework dependencies.
--   **Usecase/Application**: Orchestrates the business logic. This is where the primary application services reside.
--   **Infrastructure**: Deals with external concerns like REST APIs (Web), database interactions (Persistence), and error handling.
+### 2. Product-Wise Coupons
+- Provides a discount on a specific product in the cart.
+- Example: If product ID 1 has a 20% discount and the customer buys 6 units at ₹50 each, the discount applied is ₹60.
 
-### The Strategy Design Pattern
-To support different coupon types and allow for future extensibility, the **Strategy Design Pattern** is used.
--   An `DiscountStrategy` interface defines the common operations for all coupon types: `isApplicable` and `apply`.
--   Concrete classes (`CartWiseStrategy`, `ProductWiseStrategy`, `BxGyStrategy`) implement this interface for each coupon type.
--   This design makes it easy to add new coupon types (e.g., `FirstTimeUserDiscount`) without modifying existing code, adhering to the **Open/Closed Principle**.
+### 3. BxGy (Buy X, Get Y) Coupons
+- Customer buys a specified quantity of eligible products and receives certain products for free (with a repetition limit).
+- Example: If the threshold is ₹100 and the discount is 10%, then a cart worth ₹440 gets a discount of ₹44.Example: Buy 3 items from products [1,2] and get 1 item of product [3] free, up to 2 repetitions.
+- The discount is calculated based on the price of the cheapest eligible “get” products in the cart.
 
 ---
 
-## Tech Stack
--   **Framework**: Spring Boot 3.3.4
--   **Language**: Java 17
--   **Build Tool**: Gradle
--   **Database**: SQLite (embedded via `sqlite-jdbc`)
--   **ORM**: Spring Data JPA / Hibernate
--   **API**: RESTful
+## Unimplemented Cases
+
+### 1. Coupon Stacking / Combination Rules
+- Could not implement rules for applying multiple coupons together (e.g., product-wise + cart-wise).
+- Example: Requires a rules engine to manage precedence and conflicts.
+
+### 2. Advanced Discount Types
+- Fixed amount discounts (₹100 off).
+- Percentage discounts with a cap (20% off, up to ₹150).
+- Category-wise discounts.
+- Free shipping.
+
+### 3. Advanced Constraints
+- Global usage limits (e.g., valid only for first 500 uses).
+- Per-user usage limits (e.g., one use per customer).
+- Segment-specific coupons (e.g., only for new users).
+- Payment method–specific discounts.
+
+---
+
+## Limitations
+
+1.  **No Coupon Stacking**: As mentioned, the most significant limitation is the inability to combine multiple coupons. A dedicated `CouponApplicationService` with a rules engine would be needed to implement this.
+2.  **Stateless Cart**: For a production system, cart state should be persisted on the server, likely linked to a user session.
+3.  **Basic Validation**: Input validation is basic. It could be enhanced with more specific business rule validations (e.g., ensuring discount percentages are between 1 and 100).
+4.  **Database**: The embedded SQLite database is for development convenience and is not suitable for a production environment. It should be replaced with a robust database like PostgreSQL or MySQL.
+5.  **Security**: The API is not secured. In a real-world scenario, endpoints should be protected using Spring Security (e.g., JWT, OAuth2).
+6.  **Asynchronous Operations**: For high-traffic scenarios, operations like checking coupon applicability could be optimized, potentially with caching layers (e.g., Redis).
+
+---
+
+## Assumptions
+
+1.  **Single Coupon Application**: The `/apply-coupon/{id}` endpoint assumes only one coupon can be applied to a cart at a time. The system does not currently support coupon stacking.
+2.  **Client-Side Cart State**: The API is stateless. The entire cart object is passed in each request. The server does not maintain cart state between calls.
+3.  **Authoritative Pricing**: The `price` for each item is provided in the request payload. The API does not have its own product price catalog.
+4.  **BxGy Discount Logic**: For BxGy coupons, when multiple eligible "get" items are in the cart, the discount is always applied to the cheapest ones first to maximize customer savings.
 
 ---
 
 ## API Endpoints
 
-(Note: `{{host}}` is `http://localhost:8080`)
+(Note: `{{host}}` is `http://localhost:8080/api/v1/coupons`)
 
 ### 1. Create a new Coupon
 -   **Endpoint**: `POST /coupons`
@@ -145,84 +174,3 @@ To support different coupon types and allow for future extensibility, the **Stra
       "finalTotal": 675.0
     }
     ```
----
-
-## How to Run the Application
-
-1.  **Prerequisites**: JDK 17 and Gradle installed.
-2.  **Clone the repository**.
-3.  **Run the application** using the Gradle wrapper:
-    ```bash
-    ./gradlew bootRun
-    ```
-4.  The application will start on port `8080`, and a `coupons.db` SQLite file will be created in the root directory.
-
----
-
-## Coupon Use Cases & Scenarios
-
-### Implemented Cases ✅
-
-1.  **Cart-Wise Coupons**
-    -   **Scenario**: 10% off on cart totals over ₹500.
-    -   **Implementation**: The `CartWiseStrategy` checks if `cart.total >= minCartValue`. If so, it calculates a percentage-based discount on the entire cart.
-
-2.  **Product-Wise Coupons**
-    -   **Scenario**: 20% off on "Product ID: prod-123".
-    -   **Implementation**: The `ProductWiseStrategy` checks if the specified product ID exists in the cart. The discount is applied only to the total price of that specific product line item.
-
-3.  **BxGy (Buy X, Get Y) Coupons**
-    -   **Scenario**: Buy 2 items from products [A, B], get 1 item of product [C] free. Repetition limit of 2.
-    -   **Implementation**:
-        -   The `BxGyStrategy` first counts the total quantity of eligible "buy" items in the cart.
-        -   It calculates how many times the offer can be claimed (`num_applications = total_buy_items / buyQuantity`).
-        -   This is capped by the `repetitionLimit`.
-        -   The number of free "get" items is `num_applications * getQuantity`.
-        -   To maximize customer benefit, the discount is applied to the **cheapest eligible "get" items** present in the cart.
-
-### Unimplemented Cases & Future Considerations 🤔
-
-The following use cases were considered but not implemented due to time constraints. The current architecture is designed to support them in the future.
-
-1.  **Coupon Stacking / Combination Rules**
-    -   **Scenario**: Can a user apply a 20% product-wise coupon *and* a 10% cart-wise coupon?
-    -   **Challenge**: This requires a complex rules engine.
-    -   **Possible Rules**:
-        -   Allow only one cart-wise coupon per order.
-        -   Allow multiple product-wise coupons on different products.
-        -   Define an order of application (e.g., product discounts first, then cart discount on the remaining total).
-        -   Prohibit combining certain coupon types.
-
-2.  **Advanced Coupon Types**
-    -   **Fixed Amount Discount**: e.g., "₹100 off on orders over ₹1000".
-    -   **Percentage with Cap**: e.g., "20% off, up to a maximum of ₹150".
-    -   **Category-Wise Discount**: e.g., "15% off all items in the 'Electronics' category".
-    -   **Free Shipping**: On orders meeting certain criteria.
-
-3.  **Advanced Coupon Constraints**
-    -   **Usage Limits**:
-        -   **Global**: "Valid for the first 500 users". This requires a usage counter on the coupon entity.
-        -   **Per-User**: "One use per customer". This requires associating orders/coupon usage with a `userId`.
-    -   **User/Segment Specific**: Coupons valid only for specific user IDs or user segments (e.g., "new users", "gold members").
-    -   **Payment Method Specific**: e.g., "Extra 5% off with HDFC Bank cards".
-    -   **Tiered Discounts**: "10% off on ₹1000+, 15% off on ₹2000+".
-
----
-
-## Assumptions
-
-1.  **Single Coupon Application**: The `/apply-coupon/{id}` endpoint assumes only one coupon can be applied to a cart at a time. The system does not currently support coupon stacking.
-2.  **Client-Side Cart State**: The API is stateless. The entire cart object is passed in each request. The server does not maintain cart state between calls.
-3.  **Authoritative Pricing**: The `price` for each item is provided in the request payload. The API does not have its own product price catalog.
-4.  **BxGy Discount Logic**: For BxGy coupons, when multiple eligible "get" items are in the cart, the discount is always applied to the cheapest ones first to maximize customer savings.
-
----
-
-## Limitations & Future Improvements
-
-1.  **No Coupon Stacking**: As mentioned, the most significant limitation is the inability to combine multiple coupons. A dedicated `CouponApplicationService` with a rules engine would be needed to implement this.
-2.  **Stateless Cart**: For a production system, cart state should be persisted on the server, likely linked to a user session.
-3.  **Basic Validation**: Input validation is basic. It could be enhanced with more specific business rule validations (e.g., ensuring discount percentages are between 1 and 100).
-4.  **Database**: The embedded SQLite database is for development convenience and is not suitable for a production environment. It should be replaced with a robust database like PostgreSQL or MySQL.
-5.  **Security**: The API is not secured. In a real-world scenario, endpoints should be protected using Spring Security (e.g., JWT, OAuth2).
-6.  **Asynchronous Operations**: For high-traffic scenarios, operations like checking coupon applicability could be optimized, potentially with caching layers (e.g., Redis).
