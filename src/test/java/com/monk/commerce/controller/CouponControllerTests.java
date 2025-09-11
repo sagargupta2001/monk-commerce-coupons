@@ -33,7 +33,6 @@ class CouponControllerTests {
     @Autowired
     private ObjectMapper mapper;
 
-    // 👇 Inject the mock bean from MockConfig
     @Autowired
     private CouponService service;
 

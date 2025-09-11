@@ -327,7 +327,6 @@ public class CouponServiceImplTest {
         verify(repository, never()).save(any());
     }
 
-    // ----------------- updateCoupon catch block -----------------
     @Test
     void testUpdateCouponSerializationFailure() throws Exception {
         Coupon existing = new Coupon();
