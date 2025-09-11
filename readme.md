@@ -81,11 +81,10 @@ This project is a RESTful API for managing and applying various types of discoun
         {
           "type": "CART_WISE",
           "details": {
-            "minCartValue": 500,
-            "discountPercentage": 10
-          },
-          "active": true,
-          "expiryDate": "2025-12-31"
+            "threshold": 500,
+            "discount": 10,
+            "expiryDate": "2025-12-31"
+          }    
         }
         ```
     -   **Product-wise**:
@@ -94,9 +93,8 @@ This project is a RESTful API for managing and applying various types of discoun
           "type": "PRODUCT_WISE",
           "details": {
             "productId": "prod-123",
-            "discountPercentage": 25
-          },
-          "active": true
+            "discount": 25
+          }
         }
         ```
     -   **BxGy (Buy X, Get Y)**:
@@ -104,13 +102,20 @@ This project is a RESTful API for managing and applying various types of discoun
         {
           "type": "BXGY",
           "details": {
-            "buyProductIds": ["prod-abc", "prod-def"],
-            "buyQuantity": 2,
-            "getProductIds": ["prod-ghi"],
-            "getQuantity": 1,
+            "buyProducts": [{
+                "productId": 1,
+                "quantity": 3
+             },
+             {
+                "productId": 2,
+                "quantity": 3
+             }],
+            "getProducts": [{
+                "productId": 3,
+                "quantity": 1
+             }],
             "repetitionLimit": 3
-          },
-          "active": true
+          }
         }
         ```
 
@@ -133,44 +138,71 @@ This project is a RESTful API for managing and applying various types of discoun
     ```json
     {
       "items": [
-        { "productId": "prod-123", "quantity": 2, "price": 200.0 },
-        { "productId": "prod-456", "quantity": 1, "price": 350.0 }
+        { 
+          "productId": 1, 
+          "quantity": 2, 
+          "price": 200.0 
+        },
+        { 
+          "productId": 2, 
+          "quantity": 1, 
+          "price": 350.0 
+        }
       ]
     }
     ```
 -   **Sample Response**:
     ```json
-    [
-      {
-        "couponId": 1,
-        "type": "CART_WISE",
-        "discountAmount": 75.0
-      }
-    ]
+    {
+      "applicableCoupons": [
+        {
+          "couponId": 1,
+          "type": "CART_WISE",
+          "discount": 75.0
+        }
+      ]
+    }
     ```
 
 ### 7. Apply a Coupon to a Cart
 -   **Endpoint**: `POST /apply-coupon/{id}`
 -   **Description**: Applies a specific coupon to a cart and returns the updated cart state with discounts applied.
+-   **Sample Payload**:
+  ```json
+  {
+    "items": [
+      { 
+        "productId": 1, 
+        "quantity": 2, 
+        "price": 200.0 
+      },
+      { 
+        "productId": 2, 
+        "quantity": 1, 
+        "price": 350.0 
+      }
+    ]
+  }
+  ```
 -   **Sample Response**:
     ```json
     {
       "items": [
         {
-          "productId": "prod-123",
+          "productId": 1,
           "quantity": 2,
           "price": 200.0,
-          "discount": 0.0
+          "totalDiscount": 0.0
         },
         {
-          "productId": "prod-456",
+          "productId": 2,
           "quantity": 1,
           "price": 350.0,
-          "discount": 0.0
+          "totalDiscount": 0.0
         }
       ],
-      "originalTotal": 750.0,
+      "totalPrice": 750.0,
       "totalDiscount": 75.0,
-      "finalTotal": 675.0
+      "finalPrice": 675.0
     }
     ```
